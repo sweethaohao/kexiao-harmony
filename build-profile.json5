@@ -1,0 +1,63 @@
+{
+  "app": {
+    /*
+     * 本地调试签名（离线，不需要登录华为账号）
+     *   signature/          签名材料，由 tools/dev/gen-signature.sh 生成
+     *   signature/material/ 加密口令的密钥材料，由 tools/dev/hvigor-signing-pwd.mjs 生成
+     * 下面的密码是 hvigor 的 AES-GCM 密文（明文 123456），不能直接填明文。
+     * profile 里绑定了当前设备 UDID，换设备需重跑 gen-signature.sh --force。
+     */
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "./signature/kexiao.p12",
+          "storePassword": "00000016eb04b96ca8e5be08caa15ea3d9c1b1362f6dc2530c674d868cfbd8129b051cae4f00",
+          "keyAlias": "openharmony application release",
+          "keyPassword": "00000016eb04b96ca8e5be08caa15ea3d9c1b1362f6dc2530c674d868cfbd8129b051cae4f00",
+          "signAlg": "SHA256withECDSA",
+          "certpath": "./signature/kexiao_app.cer",
+          "profile": "./signature/kexiao_debug.p7b"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "targetSdkVersion": "26.0.0",
+        "compatibleSdkVersion": "6.1.1(24)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

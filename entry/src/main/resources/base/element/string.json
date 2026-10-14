@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "课晓主模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "课晓 · 校园日程助手"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "课晓"
+    }
+  ]
+}
