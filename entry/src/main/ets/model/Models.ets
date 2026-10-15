@@ -256,6 +256,21 @@ export interface ImportResult {
   warnings: string[];
 }
 
+/**
+ * HTML 表格里的一个单元格（见 service/HtmlTableService.ets）。
+ * 之所以单独建模而不是用字符串，是因为 rowspan/colspan 决定列位置 ——
+ * 课表里"第一节-第二节"的课往往用 rowspan=2 占两行，不展开就会让后面所有列左移，
+ * 星期会全体错位。
+ */
+export interface HtmlCell {
+  /** 单元格里的纯文本（原 <br> 已变成 \n） */
+  text: string;
+  /** 横向跨列数，默认 1 */
+  colspan: number;
+  /** 纵向跨行数，默认 1 */
+  rowspan: number;
+}
+
 // ===========================================================================
 // 五、视图辅助类型
 // ===========================================================================
@@ -355,3 +370,66 @@ export const WEEKDAY_SHORT: string[] = ['周一', '周二', '周三', '周四', 
 export const WEEKDAY_FULL: string[] = [
   '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'
 ];
+
+// ===========================================================================
+// 七、持久化行记录
+// ===========================================================================
+/**
+ * 这几组接口描述「数据库里的一行」在内存中的形态，只用于 StorageMapper 搬运数据。
+ *
+ * 为什么不直接用 Course / ScheduleEntry？
+ *   1. 表里的列名是下划线风格（course_id），模型里是驼峰（courseId），
+ *      中间需要一次显式翻译，把这些差别集中在一个地方比散在各处好；
+ *   2. 表里不能存数组，周次要序列化成文本，有独立的字段名（weeksJson）。
+ *
+ * ⚠️ 读数据库时**不要**靠这些属性名取值。release 包开了属性名混淆，
+ *    属性名会被改名，而 SQL 的列名不会 —— 所以一律用
+ *    `resultSet.getColumnIndex(列名)` 拿下标、再按下标取值。
+ */
+
+/** course 表的一行 */
+export interface CourseRow {
+  id: number;
+  name: string;
+  code: string;
+  teacher: string;
+  campus: string;
+  room: string;
+  color: string;
+}
+
+/** schedule_entry 表的一行 */
+export interface EntryRow {
+  id: number;
+  /** 外键 → course.id */
+  courseId: number;
+  weekday: number;
+  startSlot: number;
+  endSlot: number;
+  /** 周次数组的 JSON 文本，如 '[1,2,3,5]' */
+  weeksJson: string;
+  weeksRaw: string;
+  room: string;
+  teacher: string;
+  campus: string;
+}
+
+/** semester 表的一行 */
+export interface SemesterRow {
+  id: number;
+  name: string;
+  startDate: string;
+  totalWeeks: number;
+}
+
+/** import_meta 表的一行（记录"上一次导入来自哪里"，用于导入页回显） */
+export interface ImportMeta {
+  /** 数据来源描述，如「我的课表.docx」 */
+  source: string;
+  /** 导入时间，'yyyy-MM-dd HH:mm' */
+  importedAt: string;
+  /** 导入时的排课条数 */
+  itemCount: number;
+  /** 导入时的课程门数 */
+  courseCount: number;
+}

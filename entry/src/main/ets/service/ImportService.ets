@@ -1,14 +1,18 @@
 /**
  * 课晓 · 导入服务（ImportService）
  * ---------------------------------------------------------------------------
- * 职责：把「外部 JSON（schemaVersion 1）」翻译成课晓内部的标准模型。
+ * 职责：把「外部数据」收敛成课晓内部的标准模型。
  *
- * 外部 JSON 由电脑侧脚本 tools/parse_schedule.py 从教务 Word 课表生成，
- * 它的字段名是给"人类阅读"用的（weekday 是「星期一」这种中文），
- * 而内部模型要的是数字、id、以及归并好的 Course。
- * 这个翻译 + 校验 + 纠错的过程全部在本文件。
+ * 现在有两条上游：
+ *   ① JSON 文件（课晓格式，schemaVersion 1）—— 由 parse() 负责解析；
+ *   ② 用户粘贴的课表文本 —— 由 TextImportService 解析成同样的条目数组后，
+ *      调用下面的 buildResult() 收口。
  *
- * 本文件是纯逻辑（不依赖 @ohos 能力），可以在电脑上用 Node 跑测试。
+ * 把「收敛」这一步单独抽出来（去重 / 归并课程 / 汇总告警）是有意的：
+ * 两条上游必须走上**完全相同**的规则，否则同一份课表从粘贴进来和从文件
+ * 进来会得到两种结果，这种不一致以后极难排查。
+ *
+ * 本文件是纯逻辑（不依赖 @ohos），可以在电脑上用 Node 跑测试。
  * ---------------------------------------------------------------------------
  */
 
@@ -121,7 +125,7 @@ export function weeksToText(weeks: number[]): string {
 
 export class ImportService {
   /**
-   * 解析导入文本。
+   * 解析「课晓格式」的 JSON 文本。
    * 返回值 ok = false 表示是"结构性失败"（文件根本不是课晓格式），此时 error 有内容；
    * 单条记录的毛病不会让整体失败，而是记进 warnings。
    */
@@ -143,6 +147,23 @@ export class ImportService {
     const entries: ImportEntryJson[] = raw.entries;
     if (entries === undefined || entries === null || !Array.isArray(entries)) {
       return ImportService.failure('文件里没有 entries 列表');
+    }
+    const source: string = raw.source === undefined ? '未知来源' : `${raw.source}`;
+    return ImportService.buildResult(entries, source);
+  }
+
+  /**
+   * ★ 收口：把「一堆原始条目」收敛成一份可落库的 ImportResult。
+   *
+   * 不管上游是 JSON 文件还是粘贴文本，最后都走这里，保证两条路
+   * 的去重口径、课程归并口径、告警口径完全一致。
+   *
+   * 单条记录的问题（没课名、认不出星期、周次为空）只影响那一条，
+   * 记进 warnings 后继续处理；只有"一条都用不了"才整体失败。
+   */
+  static buildResult(entries: ImportEntryJson[], source: string): ImportResult {
+    if (entries === undefined || entries === null || entries.length === 0) {
+      return ImportService.failure('没有解析出任何课程记录');
     }
 
     const warnings: string[] = [];
@@ -263,7 +284,7 @@ export class ImportService {
     }
 
     if (items.length === 0) {
-      return ImportService.failure('文件里没有一条能用的课程记录，请检查课表来源是否正确');
+      return ImportService.failure('没有一条能用的课程记录，请检查课表来源是否正确');
     }
 
     if (duplicated > 0) {
@@ -273,7 +294,6 @@ export class ImportService {
       warnings.push(`共跳过 ${skipped} 条异常记录`);
     }
 
-    const source: string = raw.source === undefined ? '未知来源' : `${raw.source}`;
     const result: ImportResult = {
       ok: true,
       error: '',
@@ -287,7 +307,8 @@ export class ImportService {
     return result;
   }
 
-  private static failure(message: string): ImportResult {
+  /** 结构性失败的统一出口（Excel / 文本解析器也要用，所以是 public） */
+  static failure(message: string): ImportResult {
     const empty: ImportResult = {
       ok: false,
       error: message,
@@ -303,7 +324,7 @@ export class ImportService {
 
   /**
    * 兜底推断学期起始日。
-   * 目前课表文件里没有学期信息，先按"导入当周就是第 1 周"来猜，
+   * 目前课表内容里没有学期信息，先按"导入当周就是第 1 周"来猜，
    * 之后用户在设置页里改一次即可（设置页会持久化）。
    */
   static guessSemesterStart(now: Date): string {

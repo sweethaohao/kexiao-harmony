@@ -86,9 +86,14 @@ export function colorForCourse(name: string): string {
   return COURSE_COLORS[idx];
 }
 
+/** 按给定参数生成节次时间表（用户改过作息后传改过的参数进来） */
+export function createTimeTable(configs: PeriodConfig[]): SlotTimeTable {
+  return SlotTimeTable.build(configs);
+}
+
 /** 生成默认节次时间表 */
 export function createDefaultTimeTable(): SlotTimeTable {
-  return SlotTimeTable.build(DEFAULT_PERIOD_CONFIGS);
+  return createTimeTable(DEFAULT_PERIOD_CONFIGS);
 }
 
 /**
@@ -97,3 +102,11 @@ export function createDefaultTimeTable(): SlotTimeTable {
  * 这里仅作为"还没设置时"的兜底，避免日期换算崩溃。
  */
 export const DEFAULT_SEMESTER_START: string = '2026-09-07';
+
+/**
+ * 默认学期总周数。
+ * 用在"导入的内容里根本没写周次"的时候（粘贴导入很常见：
+ * 教务系统课表页面上只画了格子，周次写在标题或干脆没有）。
+ * 宁可先按一个常规值填上、在预览里标出来让用户改，也不要因为缺周次就整条丢掉。
+ */
+export const DEFAULT_TOTAL_WEEKS: number = 16;

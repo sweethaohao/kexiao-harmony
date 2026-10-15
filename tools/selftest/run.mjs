@@ -28,7 +28,17 @@ const MODULES = [
   'common/DateUtil.ets',
   'common/SlotTimeTable.ets',
   'service/ScheduleService.ets',
-  'service/ImportService.ets'
+  'service/ImportService.ets',
+  // 存储层里"不碰系统能力"的两块：SQL 常量与行↔模型映射，
+  // 都能脱离模拟器验证。真正跑 SQL 的 ScheduleDao 不在此列。
+  'service/StorageMapper.ets',
+  'database/DbConstants.ets',
+  // 粘贴导入的解析器 + 手动增删改，都是纯逻辑，最该在这里被反复捶
+  'service/TextImportService.ets',
+  'service/HtmlTableService.ets',
+  'service/ScheduleEditor.ets',
+  // 教务处公开课表 xlsx 的解析器（解压由页面层做，这里只管 XML）
+  'service/XlsxService.ets'
 ];
 
 /** 收集某个模块里所有"纯类型"导出的名字 */
@@ -125,6 +135,9 @@ function main() {
   // ---- 5. 转换测试用例本身 ----
   // fixture 里全是值，没有纯类型
   typeNamesByModule.set('fixture', new Set());
+  // Excel 测试用的 XML 片段（同样全是虚构数据，直接搬过去就行）
+  typeNamesByModule.set('fixture-xlsx', new Set());
+  fs.copyFileSync(path.join(here, 'fixture-xlsx.ts'), path.join(buildDir, 'fixture-xlsx.ts'));
   const casesPath = path.join(here, 'cases.ts');
   const casesText = fs.readFileSync(casesPath, 'utf8');
   const casesConverted = rewriteImports(casesText, typeNamesByModule, warn);

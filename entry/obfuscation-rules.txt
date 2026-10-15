@@ -44,3 +44,22 @@ room
 teacher
 weekday
 slot
+
+# ---------------------------------------------------------------------------
+# 作息参数也是同一个道理，但走的是另一条通道：
+#   PeriodConfig[] 会序列化成 JSON 文本存进「首选项」（preferences），
+#   读回来时 JSON.parse 得到的键名仍然是原文，而属性名会被混淆 ——
+#   不保留的话，用户改过的作息在 release 包里读不出来，界面会悄悄退回默认值，
+#   而且只在 release 包复现，最难查。
+# 契约见 model/Models.ets 的 PeriodConfig。
+# ---------------------------------------------------------------------------
+-keep-property-name
+key
+label
+startTime
+bigCourseCount
+smallPerBig
+smallSlotMinutes
+breakInBigMinutes
+breakBetweenBigMinutes
+trailingSmallCount
